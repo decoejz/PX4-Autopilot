@@ -143,6 +143,7 @@ px4_add_module(
 		tunes
 		variable_length_ringbuffer
 		version
+		rsa
 	UNITY_BUILD
 	)
 

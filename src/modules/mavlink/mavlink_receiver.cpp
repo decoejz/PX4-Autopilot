@@ -63,11 +63,56 @@
 
 #include <lib/drivers/device/Device.hpp> // For DeviceId union
 
+#include <lib/sign_scheme/rsa/rsa.h>
+
 #ifdef CONFIG_NET
 #define MAVLINK_RECEIVER_NET_ADDED_STACK 1360
 #else
 #define MAVLINK_RECEIVER_NET_ADDED_STACK 0
 #endif
+
+const char *sk_name = "../../../pki/qgc_pk.pem";
+static EVP_PKEY *px4_key = read_key(PRIVATE_KEY, sk_name);
+
+
+// Res > 0: Signature valid and the res is the msg size
+// Res == 0: Invalid signature
+// Res < 0: Error
+int verify_sign(uint8_t *buf, int buf_len)
+{
+    // Quando o lado que envia estiver sem assinatura aqui vai dar segfault
+    // se nao ajustar essa parte do codigo!
+    printf("Buf len = %d\nSigma len = %d\n", buf_len, SIGMA_LEN);
+    // ! A assinatura esta chegando corretamente porem em algum momento esta sendo processada errada dado que o resultado esta sendo invalido.
+
+    // O buffer eh composto de msg + sigma
+
+    int msg_len = buf_len - SIGMA_LEN;
+    unsigned char sigma[SIGMA_LEN];
+    uint8_t msg[msg_len];
+
+    for (int i = 0; i < buf_len; i++)
+    {
+        if (i < msg_len)
+        {
+            msg[i] = buf[i];
+        }
+        else
+        {
+            sigma[i] = buf[i];
+        }
+    }
+
+    int valid = verify(sigma, SIGMA_LEN, msg, msg_len, px4_key);
+    if (valid < 1)
+    {
+	printf("DEU INVALIDO \n");
+        return 0;
+    }
+
+    return msg_len;
+}
+
 
 MavlinkReceiver::~MavlinkReceiver()
 {
@@ -3131,9 +3176,11 @@ MavlinkReceiver::run()
 			// only start accepting messages on UDP once we're sure who we talk to
 			if (_mavlink->get_protocol() != Protocol::UDP || _mavlink->get_client_source_initialized()) {
 #endif // MAVLINK_UDP
-
+				// ! Aqui eh o local que deve ser alterado!
+				printf("A hora da verdade eh aqui mesmo!!\n");
+				int msg_size = verify_sign(buf, nread);
 				/* if read failed, this loop won't execute */
-				for (ssize_t i = 0; i < nread; i++) {
+				for (ssize_t i = 0; i < msg_size; i++) {
 					if (mavlink_parse_char(_mavlink->get_channel(), buf[i], &msg, &_status)) {
 
 						/* check if we received version 2 and request a switch. */
@@ -3182,9 +3229,9 @@ MavlinkReceiver::run()
 					}
 				}
 
-				/* count received bytes (nread will be -1 on read error) */
-				if (nread > 0) {
-					_mavlink->count_rxbytes(nread);
+				/* count received bytes (msg_size will be -1 on read error) */
+				if (msg_size > 0) {
+					_mavlink->count_rxbytes(msg_size);
 
 					telemetry_status_s &tstatus = _mavlink->telemetry_status();
 					tstatus.rx_message_count = _total_received_counter;
