@@ -71,9 +71,8 @@
 #define MAVLINK_RECEIVER_NET_ADDED_STACK 0
 #endif
 
-const char *sk_name = "../../../pki/qgc_pk.pem";
-static EVP_PKEY *px4_key = read_key(PRIVATE_KEY, sk_name);
-
+const char *pk_name = "../../../pki/qgc_pk.pem";
+static EVP_PKEY *qgc_key;
 
 // Res > 0: Signature valid and the res is the msg size
 // Res == 0: Invalid signature
@@ -82,8 +81,11 @@ int verify_sign(uint8_t *buf, int buf_len)
 {
     // Quando o lado que envia estiver sem assinatura aqui vai dar segfault
     // se nao ajustar essa parte do codigo!
-    printf("Buf len = %d\nSigma len = %d\n", buf_len, SIGMA_LEN);
-    // ! A assinatura esta chegando corretamente porem em algum momento esta sendo processada errada dado que o resultado esta sendo invalido.
+
+    if (qgc_key == NULL)
+    {
+        qgc_key = read_key(PUBLIC_KEY, pk_name);
+    }
 
     // O buffer eh composto de msg + sigma
 
@@ -91,22 +93,29 @@ int verify_sign(uint8_t *buf, int buf_len)
     unsigned char sigma[SIGMA_LEN];
     uint8_t msg[msg_len];
 
+    int counter = 0;
+    int sigma_init = 0;
     for (int i = 0; i < buf_len; i++)
     {
         if (i < msg_len)
         {
-            msg[i] = buf[i];
+            msg[counter] = buf[i];
         }
         else
         {
-            sigma[i] = buf[i];
+	    // !! Validar se eh melhor ter um counter para cada etapa ou o mesmo counter zerado (como esta agora)
+	    if (!sigma_init) {
+		counter = 0;
+		sigma_init=1;
+	    }
+            sigma[counter] = buf[i];
         }
+	counter++;
     }
 
-    int valid = verify(sigma, SIGMA_LEN, msg, msg_len, px4_key);
+    int valid = verify(sigma, SIGMA_LEN, msg, msg_len, qgc_key);
     if (valid < 1)
     {
-	printf("DEU INVALIDO \n");
         return 0;
     }
 
@@ -3093,7 +3102,7 @@ MavlinkReceiver::run()
 	uint8_t buf[1000];
 #else
 	/* the serial port buffers internally as well, we just need to fit a small chunk */
-	uint8_t buf[64];
+	uint8_t buf[64+SIGMA_LEN]; // !! Entender se realmente tem a necessidade de fazer esse buf ser do maior tamanho
 #endif
 	mavlink_message_t msg;
 
@@ -3176,10 +3185,8 @@ MavlinkReceiver::run()
 			// only start accepting messages on UDP once we're sure who we talk to
 			if (_mavlink->get_protocol() != Protocol::UDP || _mavlink->get_client_source_initialized()) {
 #endif // MAVLINK_UDP
-				// ! Aqui eh o local que deve ser alterado!
-				printf("A hora da verdade eh aqui mesmo!!\n");
 				int msg_size = verify_sign(buf, nread);
-				/* if read failed, this loop won't execute */
+				/* if read (or msg sign) failed, this loop won't execute */
 				for (ssize_t i = 0; i < msg_size; i++) {
 					if (mavlink_parse_char(_mavlink->get_channel(), buf[i], &msg, &_status)) {
 

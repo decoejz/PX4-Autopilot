@@ -5,10 +5,11 @@
 //   1 => public key
 EVP_PKEY *read_key(char key_type, const char *file_name)
 {
-    EVP_PKEY *key;
+    EVP_PKEY *key = NULL;
     FILE *fp = fopen(file_name, "r");
     if (fp == NULL)
     {
+        fprintf(stderr, "Read key error: Cannot open the file");
         return NULL;
     }
 
@@ -19,12 +20,16 @@ EVP_PKEY *read_key(char key_type, const char *file_name)
     }
     else if (key_type == PUBLIC_KEY)
     {
-
         key = PEM_read_PUBKEY(fp, NULL, NULL, NULL);
     }
     else
     {
-        return NULL;
+        fprintf(stderr, "Read key error: Invalid input");
+    }
+
+    if (!key)
+    {
+        fprintf(stderr, "Read key error: Unable to load key from file %s\n", file_name);
     }
 
     fclose(fp);
