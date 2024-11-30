@@ -8,7 +8,7 @@
 // Res:
 // 0 => ERROR
 // 1 => Success
-int sign(unsigned char *sigma, unsigned int *sigma_len, uint8_t *message, unsigned int msglen, EVP_PKEY *secret_key)
+int sign(uint8_t *sigma, unsigned int *sigma_len, uint8_t *message, unsigned int msglen, EVP_PKEY *secret_key)
 {
     // Create a context
     EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new(secret_key, NULL);

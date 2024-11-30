@@ -86,6 +86,8 @@
 #include "mavlink_shell.h"
 #include "mavlink_ulog.h"
 
+#include <lib/sign_scheme/rsa/rsa.h>
+
 #define DEFAULT_BAUD_RATE       57600
 #define DEFAULT_DEVICE_NAME     "/dev/ttyS1"
 
@@ -631,7 +633,8 @@ private:
 	unsigned short		_remote_port{DEFAULT_REMOTE_PORT_UDP};
 #endif // MAVLINK_UDP
 
-	uint8_t			_buf[MAVLINK_MAX_PACKET_LEN] {};
+	// !! Increase buf len
+	uint8_t			_buf[MAVLINK_MAX_PACKET_LEN+SIGMA_LEN] {}; // ** Updated here
 	unsigned		_buf_fill{0};
 
 	bool			_tx_buffer_low{false};

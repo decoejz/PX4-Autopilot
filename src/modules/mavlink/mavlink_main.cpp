@@ -60,6 +60,8 @@
 #include "mavlink_receiver.h"
 #include "mavlink_main.h"
 
+#include <lib/sign_scheme/rsa/rsa.h>
+
 // Guard against MAVLink misconfiguration
 #ifndef MAVLINK_CRC_EXTRA
 #error MAVLINK_CRC_EXTRA has to be defined on PX4 systems
@@ -97,6 +99,9 @@ static void usage();
 hrt_abstime Mavlink::_first_start_time = {0};
 
 bool Mavlink::_boot_complete = false;
+
+const char *sk_name = "../../../pki/px4_sk.pem";
+static EVP_PKEY *px4_key;
 
 Mavlink::Mavlink() :
 	ModuleParams(nullptr),
@@ -715,7 +720,7 @@ Mavlink::get_free_tx_buf()
 #else
 		// No FIONSPACE on Linux todo:use SIOCOUTQ  and queue size to emulate FIONSPACE
 		//Linux cp210x does not support TIOCOUTQ
-		buf_free = MAVLINK_MAX_PACKET_LEN;
+		buf_free = MAVLINK_MAX_PACKET_LEN+SIGMA_LEN;
 #endif
 
 		if (_flow_control_mode == FLOW_CONTROL_AUTO && buf_free < FLOW_CONTROL_DISABLE_THRESHOLD) {
@@ -755,6 +760,16 @@ void Mavlink::send_start(int length)
 	}
 }
 
+void print_sigma(unsigned char *sigma, int len)
+{
+    printf("\n\nValue: {");
+    for (int i = 0; i < len; i++)
+    {
+        printf("0x%02x, ", sigma[i]); // Print each byte as a 2-digit hex number
+    }
+    printf("}\n\n");
+}
+
 void Mavlink::send_finish()
 {
 	if (_tx_buffer_low || (_buf_fill == 0)) {
@@ -764,9 +779,32 @@ void Mavlink::send_finish()
 
 	int ret = -1;
 
+	// !! Assinar aqui a mensagem!!
+	if (px4_key == NULL)
+	{
+		px4_key = read_key(PRIVATE_KEY, sk_name);
+	}
+	// print_sigma(_buf,_buf_fill);
+
+	// unsigned char *sigma = NULL; // Signature var
+	unsigned int sigma_len_res=0;
+	// int sign_res = sign(sigma, &sigma_len_res, _buf, _buf_fill, px4_key);
+
+	// if (!sign_res || sigma_len_res != SIGMA_LEN)
+	// {
+	// 	printf("sign error: %s\n", strerror(errno));
+	// }
+	// // ** Concatenate sign with message to send (msg + sigma)
+	// // !! Esta dando segfault nessa movimentacao de memoria
+	uint8_t *final_message = _buf;
+	// memmove(final_message, _buf, _buf_fill);
+	// printf("fez buf move!\n");
+	// memmove(final_message + _buf_fill, sigma, sigma_len_res);
+	// printf("fez o memmove!\n");
+
 	// send message to UART
 	if (get_protocol() == Protocol::SERIAL) {
-		ret = ::write(_uart_fd, _buf, _buf_fill);
+		ret = ::write(_uart_fd, final_message, _buf_fill+sigma_len_res); // ** Updated here
 	}
 
 #if defined(MAVLINK_UDP)
@@ -777,7 +815,8 @@ void Mavlink::send_finish()
 
 		if (_src_addr_initialized) {
 # endif // CONFIG_NET
-			ret = sendto(_socket_fd, _buf, _buf_fill, 0, (struct sockaddr *)&_src_addr, sizeof(_src_addr));
+			printf("Vai enviar dentro do if 1!\n");
+			ret = sendto(_socket_fd, final_message, _buf_fill+sigma_len_res, 0, (struct sockaddr *)&_src_addr, sizeof(_src_addr)); // ** Updated here
 # if defined(CONFIG_NET)
 		}
 
@@ -791,8 +830,8 @@ void Mavlink::send_finish()
 			}
 
 			if (_broadcast_address_found && _buf_fill > 0) {
-
-				int bret = sendto(_socket_fd, _buf, _buf_fill, 0, (struct sockaddr *)&_bcast_addr, sizeof(_bcast_addr));
+				printf("Vai enviar dentro do if 2...\n");
+				int bret = sendto(_socket_fd, final_message, _buf_fill+sigma_len_res, 0, (struct sockaddr *)&_bcast_addr, sizeof(_bcast_addr)); // ** Updated here
 
 				if (bret <= 0) {
 					if (!_broadcast_failed_warned) {
