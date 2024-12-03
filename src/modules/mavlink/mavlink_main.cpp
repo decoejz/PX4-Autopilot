@@ -780,31 +780,23 @@ void Mavlink::send_finish()
 	int ret = -1;
 
 	// !! Assinar aqui a mensagem!!
+	// !! Estou no caminho certo!! Falta ajustar pois
+	//! esta causando algum delay na comunicacao.
 	if (px4_key == NULL)
 	{
 		px4_key = read_key(PRIVATE_KEY, sk_name);
 	}
-	// print_sigma(_buf,_buf_fill);
 
-	// unsigned char *sigma = NULL; // Signature var
-	unsigned int sigma_len_res=0;
-	// int sign_res = sign(sigma, &sigma_len_res, _buf, _buf_fill, px4_key);
-
-	// if (!sign_res || sigma_len_res != SIGMA_LEN)
-	// {
-	// 	printf("sign error: %s\n", strerror(errno));
-	// }
-	// // ** Concatenate sign with message to send (msg + sigma)
-	// // !! Esta dando segfault nessa movimentacao de memoria
-	uint8_t *final_message = _buf;
-	// memmove(final_message, _buf, _buf_fill);
-	// printf("fez buf move!\n");
-	// memmove(final_message + _buf_fill, sigma, sigma_len_res);
-	// printf("fez o memmove!\n");
+	uint8_t final_message[MAVLINK_MAX_PACKET_LEN+SIGMA_LEN];
+	int final_len = sign(final_message, _buf, _buf_fill, px4_key);
+	if (final_len <= 0){
+		printf("sign error: %s\n", strerror(errno));
+	}
+	// uint8_t *final_message = _buf;
 
 	// send message to UART
 	if (get_protocol() == Protocol::SERIAL) {
-		ret = ::write(_uart_fd, final_message, _buf_fill+sigma_len_res); // ** Updated here
+		ret = ::write(_uart_fd, final_message, final_len); // ** Updated here
 	}
 
 #if defined(MAVLINK_UDP)
@@ -816,7 +808,7 @@ void Mavlink::send_finish()
 		if (_src_addr_initialized) {
 # endif // CONFIG_NET
 			// printf("Vai enviar dentro do if 1!\n");
-			ret = sendto(_socket_fd, final_message, _buf_fill+sigma_len_res, 0, (struct sockaddr *)&_src_addr, sizeof(_src_addr)); // ** Updated here
+			ret = sendto(_socket_fd, final_message, final_len, 0, (struct sockaddr *)&_src_addr, sizeof(_src_addr)); // ** Updated here
 # if defined(CONFIG_NET)
 		}
 
@@ -831,7 +823,7 @@ void Mavlink::send_finish()
 
 			if (_broadcast_address_found && _buf_fill > 0) {
 				printf("Vai enviar dentro do if 2...\n");
-				int bret = sendto(_socket_fd, final_message, _buf_fill+sigma_len_res, 0, (struct sockaddr *)&_bcast_addr, sizeof(_bcast_addr)); // ** Updated here
+				int bret = sendto(_socket_fd, final_message, final_len, 0, (struct sockaddr *)&_bcast_addr, sizeof(_bcast_addr)); // ** Updated here
 
 				if (bret <= 0) {
 					if (!_broadcast_failed_warned) {
