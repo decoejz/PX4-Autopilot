@@ -779,9 +779,7 @@ void Mavlink::send_finish()
 
 	int ret = -1;
 
-	// !! Assinar aqui a mensagem!!
-	// !! Estou no caminho certo!! Falta ajustar pois
-	//! esta causando algum delay na comunicacao.
+	// * Sign message here
 	if (px4_key == NULL)
 	{
 		px4_key = read_key(PRIVATE_KEY, sk_name);
@@ -792,7 +790,6 @@ void Mavlink::send_finish()
 	if (final_len <= 0){
 		printf("sign error: %s\n", strerror(errno));
 	}
-	// uint8_t *final_message = _buf;
 
 	// send message to UART
 	if (get_protocol() == Protocol::SERIAL) {

@@ -1,13 +1,9 @@
 #include "rsa.h"
 
-// Documentation:
-// https://docs.openssl.org/3.0/man3/EVP_PKEY_verify/#notes
-
 // RES:
-// 0 => Invalid Signature
-// 1 => Signature Correct
+// <0 => Invalid Signature | Error
+// msg_size => Signature Correct
 // else => Error
-// int verify(unsigned char *sigma, int sigma_len, uint8_t *message, unsigned int msglen, EVP_PKEY *public_key)
 int verify(uint8_t *msg_signed, int total_len, EVP_PKEY *public_key)
 {
     if (public_key == NULL)
