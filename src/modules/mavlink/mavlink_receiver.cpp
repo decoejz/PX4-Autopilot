@@ -63,11 +63,16 @@
 
 #include <lib/drivers/device/Device.hpp> // For DeviceId union
 
+#include <lib/sign_scheme/rsa/rsa.h>
+
 #ifdef CONFIG_NET
 #define MAVLINK_RECEIVER_NET_ADDED_STACK 1360
 #else
 #define MAVLINK_RECEIVER_NET_ADDED_STACK 0
 #endif
+
+const char *pk_name = "../../../pki/qgc_pk.pem";
+static EVP_PKEY *qgc_key;
 
 MavlinkReceiver::~MavlinkReceiver()
 {
@@ -3048,7 +3053,7 @@ MavlinkReceiver::run()
 	uint8_t buf[1000];
 #else
 	/* the serial port buffers internally as well, we just need to fit a small chunk */
-	uint8_t buf[64];
+	uint8_t buf[64+SIGMA_LEN]; // !! Entender se realmente tem a necessidade de fazer esse buf ser do maior tamanho
 #endif
 	mavlink_message_t msg;
 
@@ -3131,9 +3136,14 @@ MavlinkReceiver::run()
 			// only start accepting messages on UDP once we're sure who we talk to
 			if (_mavlink->get_protocol() != Protocol::UDP || _mavlink->get_client_source_initialized()) {
 #endif // MAVLINK_UDP
-
-				/* if read failed, this loop won't execute */
-				for (ssize_t i = 0; i < nread; i++) {
+				// * Validate msg signature
+				if (qgc_key == NULL)
+				{
+					qgc_key = read_key(PUBLIC_KEY, pk_name);
+				}
+				int msg_size = verify(buf, nread, qgc_key);
+				/* if read (or msg sign) failed, this loop won't execute */
+				for (ssize_t i = 0; i < msg_size; i++) {
 					if (mavlink_parse_char(_mavlink->get_channel(), buf[i], &msg, &_status)) {
 
 						/* check if we received version 2 and request a switch. */
@@ -3182,9 +3192,9 @@ MavlinkReceiver::run()
 					}
 				}
 
-				/* count received bytes (nread will be -1 on read error) */
-				if (nread > 0) {
-					_mavlink->count_rxbytes(nread);
+				/* count received bytes (msg_size will be -1 on read error) */
+				if (msg_size > 0) {
+					_mavlink->count_rxbytes(msg_size);
 
 					telemetry_status_s &tstatus = _mavlink->telemetry_status();
 					tstatus.rx_message_count = _total_received_counter;

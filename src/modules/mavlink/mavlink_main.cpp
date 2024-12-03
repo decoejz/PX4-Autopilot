@@ -60,6 +60,8 @@
 #include "mavlink_receiver.h"
 #include "mavlink_main.h"
 
+#include <lib/sign_scheme/rsa/rsa.h>
+
 // Guard against MAVLink misconfiguration
 #ifndef MAVLINK_CRC_EXTRA
 #error MAVLINK_CRC_EXTRA has to be defined on PX4 systems
@@ -97,6 +99,9 @@ static void usage();
 hrt_abstime Mavlink::_first_start_time = {0};
 
 bool Mavlink::_boot_complete = false;
+
+const char *sk_name = "../../../pki/px4_sk.pem";
+static EVP_PKEY *px4_key;
 
 Mavlink::Mavlink() :
 	ModuleParams(nullptr),
@@ -715,7 +720,7 @@ Mavlink::get_free_tx_buf()
 #else
 		// No FIONSPACE on Linux todo:use SIOCOUTQ  and queue size to emulate FIONSPACE
 		//Linux cp210x does not support TIOCOUTQ
-		buf_free = MAVLINK_MAX_PACKET_LEN;
+		buf_free = MAVLINK_MAX_PACKET_LEN+SIGMA_LEN;
 #endif
 
 		if (_flow_control_mode == FLOW_CONTROL_AUTO && buf_free < FLOW_CONTROL_DISABLE_THRESHOLD) {
@@ -764,9 +769,21 @@ void Mavlink::send_finish()
 
 	int ret = -1;
 
+	// * Sign message here
+	if (px4_key == NULL)
+	{
+		px4_key = read_key(PRIVATE_KEY, sk_name);
+	}
+
+	uint8_t final_message[MAVLINK_MAX_PACKET_LEN+SIGMA_LEN];
+	int final_len = sign(final_message, _buf, _buf_fill, px4_key);
+	if (final_len <= 0){
+		printf("sign error: %s\n", strerror(errno));
+	}
+
 	// send message to UART
 	if (get_protocol() == Protocol::SERIAL) {
-		ret = ::write(_uart_fd, _buf, _buf_fill);
+		ret = ::write(_uart_fd, final_message, final_len); // ** Updated here
 	}
 
 #if defined(MAVLINK_UDP)
@@ -777,7 +794,7 @@ void Mavlink::send_finish()
 
 		if (_src_addr_initialized) {
 # endif // CONFIG_NET
-			ret = sendto(_socket_fd, _buf, _buf_fill, 0, (struct sockaddr *)&_src_addr, sizeof(_src_addr));
+			ret = sendto(_socket_fd, final_message, final_len, 0, (struct sockaddr *)&_src_addr, sizeof(_src_addr)); // ** Updated here
 # if defined(CONFIG_NET)
 		}
 
@@ -791,8 +808,7 @@ void Mavlink::send_finish()
 			}
 
 			if (_broadcast_address_found && _buf_fill > 0) {
-
-				int bret = sendto(_socket_fd, _buf, _buf_fill, 0, (struct sockaddr *)&_bcast_addr, sizeof(_bcast_addr));
+				int bret = sendto(_socket_fd, final_message, final_len, 0, (struct sockaddr *)&_bcast_addr, sizeof(_bcast_addr)); // ** Updated here
 
 				if (bret <= 0) {
 					if (!_broadcast_failed_warned) {
