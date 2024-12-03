@@ -760,16 +760,6 @@ void Mavlink::send_start(int length)
 	}
 }
 
-void print_sigma(unsigned char *sigma, int len)
-{
-    printf("\n\nValue: {");
-    for (int i = 0; i < len; i++)
-    {
-        printf("0x%02x, ", sigma[i]); // Print each byte as a 2-digit hex number
-    }
-    printf("}\n\n");
-}
-
 void Mavlink::send_finish()
 {
 	if (_tx_buffer_low || (_buf_fill == 0)) {
@@ -804,7 +794,6 @@ void Mavlink::send_finish()
 
 		if (_src_addr_initialized) {
 # endif // CONFIG_NET
-			// printf("Vai enviar dentro do if 1!\n");
 			ret = sendto(_socket_fd, final_message, final_len, 0, (struct sockaddr *)&_src_addr, sizeof(_src_addr)); // ** Updated here
 # if defined(CONFIG_NET)
 		}
@@ -819,7 +808,6 @@ void Mavlink::send_finish()
 			}
 
 			if (_broadcast_address_found && _buf_fill > 0) {
-				printf("Vai enviar dentro do if 2...\n");
 				int bret = sendto(_socket_fd, final_message, final_len, 0, (struct sockaddr *)&_bcast_addr, sizeof(_bcast_addr)); // ** Updated here
 
 				if (bret <= 0) {
