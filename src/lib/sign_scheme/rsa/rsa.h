@@ -12,12 +12,14 @@ extern "C"
 #define PRIVATE_KEY 0
 #define PUBLIC_KEY 1
 #define SIGMA_LEN 256
+#define SIGN_MAX_LEN 2048
 
     // ! Define unique interface
-    EVP_PKEY *read_key(char key_type, const char *file_name);
-    int verify(unsigned char *sigma, int sigma_len, uint8_t *message, unsigned int msglen, EVP_PKEY *public_key);
     int key_gen(const char *secret_name, const char *public_name);
-    int sign(uint8_t *sigma, unsigned int *sigma_len, uint8_t *message, unsigned int msglen, EVP_PKEY *secret_key);
+    EVP_PKEY *read_key(char key_type, const char *file_name);
+
+    int verify(uint8_t *msg_signed, int total_len, EVP_PKEY *public_key);
+    int sign(uint8_t *msg_signed, uint8_t *msg_raw, unsigned int msg_len, EVP_PKEY *secret_key);
 
 #ifdef __cplusplus
 }

@@ -74,55 +74,6 @@
 const char *pk_name = "../../../pki/qgc_pk.pem";
 static EVP_PKEY *qgc_key;
 
-// Res > 0: Signature valid and the res is the msg size
-// Res == 0: Invalid signature
-// Res < 0: Error
-int verify_sign(uint8_t *buf, int buf_len)
-{
-    // Quando o lado que envia estiver sem assinatura aqui vai dar segfault
-    // se nao ajustar essa parte do codigo!
-
-    if (qgc_key == NULL)
-    {
-        qgc_key = read_key(PUBLIC_KEY, pk_name);
-    }
-
-    // O buffer eh composto de msg + sigma
-
-    int msg_len = buf_len - SIGMA_LEN;
-    unsigned char sigma[SIGMA_LEN];
-    uint8_t msg[msg_len];
-
-    int counter = 0;
-    int sigma_init = 0;
-    for (int i = 0; i < buf_len; i++)
-    {
-        if (i < msg_len)
-        {
-            msg[counter] = buf[i];
-        }
-        else
-        {
-	    // !! Validar se eh melhor ter um counter para cada etapa ou o mesmo counter zerado (como esta agora)
-	    if (!sigma_init) {
-		counter = 0;
-		sigma_init=1;
-	    }
-            sigma[counter] = buf[i];
-        }
-	counter++;
-    }
-
-    int valid = verify(sigma, SIGMA_LEN, msg, msg_len, qgc_key);
-    if (valid < 1)
-    {
-        return 0;
-    }
-
-    return msg_len;
-}
-
-
 MavlinkReceiver::~MavlinkReceiver()
 {
 	delete _tune_publisher;
@@ -3185,7 +3136,11 @@ MavlinkReceiver::run()
 			// only start accepting messages on UDP once we're sure who we talk to
 			if (_mavlink->get_protocol() != Protocol::UDP || _mavlink->get_client_source_initialized()) {
 #endif // MAVLINK_UDP
-				int msg_size = verify_sign(buf, nread);
+				if (qgc_key == NULL)
+				{
+					qgc_key = read_key(PUBLIC_KEY, pk_name);
+				}
+				int msg_size = verify(buf, nread, qgc_key);
 				/* if read (or msg sign) failed, this loop won't execute */
 				for (ssize_t i = 0; i < msg_size; i++) {
 					if (mavlink_parse_char(_mavlink->get_channel(), buf[i], &msg, &_status)) {

@@ -7,7 +7,8 @@
 // 0 => Invalid Signature
 // 1 => Signature Correct
 // else => Error
-int verify(unsigned char *sigma, int sigma_len, uint8_t *message, unsigned int msglen, EVP_PKEY *public_key)
+// int verify(unsigned char *sigma, int sigma_len, uint8_t *message, unsigned int msglen, EVP_PKEY *public_key)
+int verify(uint8_t *msg_signed, int total_len, EVP_PKEY *public_key)
 {
     if (public_key == NULL)
     {
@@ -15,11 +16,17 @@ int verify(unsigned char *sigma, int sigma_len, uint8_t *message, unsigned int m
         return -1;
     }
 
+    int msg_len = total_len - SIGMA_LEN;
+    unsigned char sigma[SIGMA_LEN];
+    uint8_t msg_raw[msg_len];
+
+    memcpy(msg_raw, msg_signed, msg_len);
+    memcpy(sigma, msg_signed + msg_len, SIGMA_LEN);
+
     EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new(public_key, NULL);
     if (!ctx)
     {
         fprintf(stderr, "Validation ERROR - Failed to create EVP_PKEY_CTX\n");
-        ERR_print_errors_fp(stderr);
         return -1;
     }
 
@@ -30,12 +37,15 @@ int verify(unsigned char *sigma, int sigma_len, uint8_t *message, unsigned int m
         return -1;
     }
 
-    int res = EVP_PKEY_verify(ctx, sigma, sigma_len, message, msglen);
-    if (res != 0 && res != 1)
+    int res = EVP_PKEY_verify(ctx, sigma, SIGMA_LEN, (unsigned char *)msg_raw, msg_len);
+    EVP_PKEY_CTX_free(ctx);
+    if (res == 1)
+    {
+        return msg_len;
+    }
+    else
     {
         fprintf(stderr, "Validation ERROR - code %d\n", res);
+        return res;
     }
-
-    EVP_PKEY_CTX_free(ctx);
-    return res;
 }

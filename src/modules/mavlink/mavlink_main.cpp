@@ -815,7 +815,7 @@ void Mavlink::send_finish()
 
 		if (_src_addr_initialized) {
 # endif // CONFIG_NET
-			printf("Vai enviar dentro do if 1!\n");
+			// printf("Vai enviar dentro do if 1!\n");
 			ret = sendto(_socket_fd, final_message, _buf_fill+sigma_len_res, 0, (struct sockaddr *)&_src_addr, sizeof(_src_addr)); // ** Updated here
 # if defined(CONFIG_NET)
 		}
