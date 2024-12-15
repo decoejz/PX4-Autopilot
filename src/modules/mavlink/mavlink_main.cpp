@@ -60,7 +60,11 @@
 #include "mavlink_receiver.h"
 #include "mavlink_main.h"
 
+#ifdef RSA_SCHEME
 #include <lib/sign_scheme/rsa/rsa.h>
+#else // * The default method will be no signature
+#include <lib/sign_scheme/no_sign/no_sign.h>
+#endif
 
 // Guard against MAVLink misconfiguration
 #ifndef MAVLINK_CRC_EXTRA
@@ -101,7 +105,7 @@ hrt_abstime Mavlink::_first_start_time = {0};
 bool Mavlink::_boot_complete = false;
 
 const char *sk_name = "../../../pki/px4_sk.pem";
-static EVP_PKEY *px4_key;
+static key_type *px4_key;
 
 Mavlink::Mavlink() :
 	ModuleParams(nullptr),
