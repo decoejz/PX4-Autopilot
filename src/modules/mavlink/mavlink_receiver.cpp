@@ -63,7 +63,11 @@
 
 #include <lib/drivers/device/Device.hpp> // For DeviceId union
 
+#ifdef RSA_SCHEME
 #include <lib/sign_scheme/rsa/rsa.h>
+#else // * The default method will be no signature
+#include <lib/sign_scheme/no_sign/no_sign.h>
+#endif
 
 #ifdef CONFIG_NET
 #define MAVLINK_RECEIVER_NET_ADDED_STACK 1360
@@ -72,7 +76,7 @@
 #endif
 
 const char *pk_name = "../../../pki/qgc_pk.pem";
-static EVP_PKEY *qgc_key;
+static key_type *qgc_key;
 
 MavlinkReceiver::~MavlinkReceiver()
 {

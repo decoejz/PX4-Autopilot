@@ -86,7 +86,13 @@
 #include "mavlink_shell.h"
 #include "mavlink_ulog.h"
 
+#ifdef RSA_SCHEME
 #include <lib/sign_scheme/rsa/rsa.h>
+typedef EVP_PKEY key_type;
+#else // * The default method will be no signature
+#include <lib/sign_scheme/no_sign/no_sign.h>
+typedef char key_type;
+#endif
 
 #define DEFAULT_BAUD_RATE       57600
 #define DEFAULT_DEVICE_NAME     "/dev/ttyS1"

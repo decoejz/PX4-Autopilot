@@ -100,6 +100,21 @@ target_include_directories(mavlink_c
 		${MAVLINK_LIBRARY_DIR}/${MAVLINK_DIALECT_UAVIONIX}
 )
 
+# Check if SIGN_TYPE environment variable is defined
+if(DEFINED ENV{SIGN_TYPE})
+	if("$ENV{SIGN_TYPE}" STREQUAL "RSA")
+		message(STATUS "SIGN_TYPE is RSA.")
+		set(SCHEME_LIB rsa)
+		add_definitions(-DRSA_SCHEME)
+	else()
+		message(STATUS "SIGN_TYPE no signature configured.")
+		set(SCHEME_LIB no_sign)
+	endif()
+else()
+	message(STATUS "SIGN_TYPE no signature configured.")
+	set(SCHEME_LIB no_sign)
+endif()
+
 px4_add_module(
 	MODULE modules__mavlink
 	MAIN mavlink
@@ -143,7 +158,7 @@ px4_add_module(
 		tunes
 		variable_length_ringbuffer
 		version
-		rsa
+		${SCHEME_LIB}
 	UNITY_BUILD
 	)
 
