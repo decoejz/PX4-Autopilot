@@ -65,6 +65,8 @@
 
 #ifdef RSA_SCHEME
 #include <lib/sign_scheme/rsa/rsa.h>
+#elif ECSDA_SCHEME
+#include  <lib/sign_scheme/ecdsa/ecdsa.h>
 #else // * The default method will be no signature
 #include <lib/sign_scheme/no_sign/no_sign.h>
 #endif
@@ -3057,7 +3059,7 @@ MavlinkReceiver::run()
 	uint8_t buf[1000];
 #else
 	/* the serial port buffers internally as well, we just need to fit a small chunk */
-	uint8_t buf[64+SIGMA_LEN]; // !! Entender se realmente tem a necessidade de fazer esse buf ser do maior tamanho
+	uint8_t buf[64+SIGN_HEADER_SIZE +SIGN_MAX_LEN]; // !! Verificar se precisa disso
 #endif
 	mavlink_message_t msg;
 
@@ -3145,10 +3147,12 @@ MavlinkReceiver::run()
 				{
 					qgc_key = read_key(PUBLIC_KEY, pk_name);
 				}
-				int msg_size = verify(buf, nread, qgc_key);
+				uint8_t msg_raw[MAVLINK_MAX_PACKET_LEN];
+				printf("msg_raw len outside: %d\n", sizeof(msg_raw));
+				int msg_size = verify(msg_raw, buf, nread, qgc_key);
 				/* if read (or msg sign) failed, this loop won't execute */
 				for (ssize_t i = 0; i < msg_size; i++) {
-					if (mavlink_parse_char(_mavlink->get_channel(), buf[i], &msg, &_status)) {
+					if (mavlink_parse_char(_mavlink->get_channel(), msg_raw[i], &msg, &_status)) {
 
 						/* check if we received version 2 and request a switch. */
 						if (!(_mavlink->get_status()->flags & MAVLINK_STATUS_FLAG_IN_MAVLINK1)) {

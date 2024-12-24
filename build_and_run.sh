@@ -8,10 +8,13 @@ NC='\033[0m' # No color
 # cmake='/opt/homebrew/bin/cmake'
 
 echo "Which sign scheme would you like to use?"
-echo -en "1. No signature (${BLUE}default${NC})\n2. RSA\n\nRes: "
+echo -en "1. No signature (${BLUE}default${NC})\n2. RSA\n3. ECSDA\n\nRes: "
 read -r DES_SIGN
 
-if [ "$DES_SIGN" == "2" ]
+if [ "$DES_SIGN" == "3" ]
+then
+    export SIGN_TYPE=ECSDA
+elif [ "$DES_SIGN" == "2" ]
 then
     export SIGN_TYPE=RSA
 else
