@@ -65,7 +65,7 @@
 
 #ifdef RSA_SCHEME
 #include <lib/sign_scheme/rsa/rsa.h>
-#elif ECSDA_SCHEME
+#elif ECDSA_SCHEME
 #include  <lib/sign_scheme/ecdsa/ecdsa.h>
 #else // * The default method will be no signature
 #include <lib/sign_scheme/no_sign/no_sign.h>
