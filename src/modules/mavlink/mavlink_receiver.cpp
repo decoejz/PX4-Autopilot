@@ -3148,7 +3148,6 @@ MavlinkReceiver::run()
 					qgc_key = read_key(PUBLIC_KEY, pk_name);
 				}
 				uint8_t msg_raw[MAVLINK_MAX_PACKET_LEN];
-				printf("msg_raw len outside: %d\n", sizeof(msg_raw));
 				int msg_size = verify(msg_raw, buf, nread, qgc_key);
 				/* if read (or msg sign) failed, this loop won't execute */
 				for (ssize_t i = 0; i < msg_size; i++) {

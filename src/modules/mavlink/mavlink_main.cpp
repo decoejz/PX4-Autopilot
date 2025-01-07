@@ -766,16 +766,6 @@ void Mavlink::send_start(int length)
 	}
 }
 
-void print_sigma(unsigned char *sigma, int len) // !! Delete this function
-{
-    printf("\n\n Sign Value: {");
-    for (int i = 0; i < len; i++)
-    {
-        printf("0x%02x, ", sigma[i]); // Print each byte as a 2-digit hex number
-    }
-    printf("}\n\n");
-}
-
 void Mavlink::send_finish()
 {
 	if (_tx_buffer_low || (_buf_fill == 0)) {
@@ -796,7 +786,6 @@ void Mavlink::send_finish()
 	if (final_len <= 0){
 		printf("sign error: %s\n", strerror(errno));
 	}
-	// print_sigma(final_message, final_len); // !! Delete this line
 
 	// send message to UART
 	if (get_protocol() == Protocol::SERIAL) {
