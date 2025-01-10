@@ -88,6 +88,8 @@
 
 #ifdef RSA_SCHEME
 #include <lib/sign_scheme/rsa/rsa.h>
+#elif ECDSA_SCHEME
+#include  <lib/sign_scheme/ecdsa/ecdsa.h>
 #else // * The default method will be no signature
 #include <lib/sign_scheme/no_sign/no_sign.h>
 #endif
@@ -638,7 +640,7 @@ private:
 #endif // MAVLINK_UDP
 
 	// !! Increase buf len
-	uint8_t			_buf[MAVLINK_MAX_PACKET_LEN+SIGMA_LEN] {}; // ** Updated here
+	uint8_t			_buf[SIGN_HEADER_SIZE + MAVLINK_MAX_PACKET_LEN+SIGN_MAX_LEN] {}; // ** Updated here
 	unsigned		_buf_fill{0};
 
 	bool			_tx_buffer_low{false};

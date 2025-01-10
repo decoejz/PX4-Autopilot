@@ -62,6 +62,8 @@
 
 #ifdef RSA_SCHEME
 #include <lib/sign_scheme/rsa/rsa.h>
+#elif ECDSA_SCHEME
+#include  <lib/sign_scheme/ecdsa/ecdsa.h>
 #else // * The default method will be no signature
 #include <lib/sign_scheme/no_sign/no_sign.h>
 #endif
@@ -724,7 +726,7 @@ Mavlink::get_free_tx_buf()
 #else
 		// No FIONSPACE on Linux todo:use SIOCOUTQ  and queue size to emulate FIONSPACE
 		//Linux cp210x does not support TIOCOUTQ
-		buf_free = MAVLINK_MAX_PACKET_LEN+SIGMA_LEN;
+		buf_free = SIGN_HEADER_SIZE+MAVLINK_MAX_PACKET_LEN+SIGN_MAX_LEN;
 #endif
 
 		if (_flow_control_mode == FLOW_CONTROL_AUTO && buf_free < FLOW_CONTROL_DISABLE_THRESHOLD) {
@@ -779,7 +781,7 @@ void Mavlink::send_finish()
 		px4_key = read_key(PRIVATE_KEY, sk_name);
 	}
 
-	uint8_t final_message[MAVLINK_MAX_PACKET_LEN+SIGMA_LEN];
+	uint8_t final_message[SIGN_HEADER_SIZE + MAVLINK_MAX_PACKET_LEN + SIGN_MAX_LEN];
 	int final_len = sign(final_message, _buf, _buf_fill, px4_key);
 	if (final_len <= 0){
 		printf("sign error: %s\n", strerror(errno));

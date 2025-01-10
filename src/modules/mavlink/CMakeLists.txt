@@ -31,6 +31,12 @@
 #
 ############################################################################
 
+string(ASCII 27 Esc)
+set(ColourReset "${Esc}[m")
+set(Red         "${Esc}[31m")
+set(Green       "${Esc}[32m")
+set(Blue        "${Esc}[34m")
+
 set(MAVLINK_GIT_DIR "${CMAKE_CURRENT_LIST_DIR}/mavlink")
 set(MAVLINK_LIBRARY_DIR "${CMAKE_BINARY_DIR}/mavlink")
 file(RELATIVE_PATH MAVLINK_GIT_DIR_RELATIVE ${CMAKE_SOURCE_DIR} ${MAVLINK_GIT_DIR})
@@ -103,15 +109,19 @@ target_include_directories(mavlink_c
 # Check if SIGN_TYPE environment variable is defined
 if(DEFINED ENV{SIGN_TYPE})
 	if("$ENV{SIGN_TYPE}" STREQUAL "RSA")
-		message(STATUS "SIGN_TYPE is RSA.")
+		message(STATUS "SIGN_TYPE is ${Blue}RSA${ColourReset}.")
 		set(SCHEME_LIB rsa)
 		add_definitions(-DRSA_SCHEME)
+	elseif("$ENV{SIGN_TYPE}" STREQUAL "ECDSA")
+		message(STATUS "SIGN_TYPE is ${Blue}ECDSA${ColourReset}.")
+		set(SCHEME_LIB ecdsa)
+		add_definitions(-DECDSA_SCHEME)
 	else()
-		message(STATUS "SIGN_TYPE no signature configured.")
+		message(STATUS "SIGN_TYPE ${Blue}no signature${ColourReset} configured.")
 		set(SCHEME_LIB no_sign)
 	endif()
 else()
-	message(STATUS "SIGN_TYPE no signature configured.")
+	message(STATUS "SIGN_TYPE ${Blue}no signature${ColourReset} configured.")
 	set(SCHEME_LIB no_sign)
 endif()
 
