@@ -63,22 +63,13 @@
 
 #include <lib/drivers/device/Device.hpp> // For DeviceId union
 
-#ifdef RSA_SCHEME
-#include <lib/sign_scheme/rsa/rsa.h>
-#elif ECDSA_SCHEME
-#include  <lib/sign_scheme/ecdsa/ecdsa.h>
-#else // * The default method will be no signature
-#include <lib/sign_scheme/no_sign/no_sign.h>
-#endif
+#include "sign_scheme.h"
 
 #ifdef CONFIG_NET
 #define MAVLINK_RECEIVER_NET_ADDED_STACK 1360
 #else
 #define MAVLINK_RECEIVER_NET_ADDED_STACK 0
 #endif
-
-const char *pk_name = "../../../pki/qgc_pk.pem";
-static key_type *qgc_key;
 
 MavlinkReceiver::~MavlinkReceiver()
 {
@@ -3143,10 +3134,8 @@ MavlinkReceiver::run()
 			if (_mavlink->get_protocol() != Protocol::UDP || _mavlink->get_client_source_initialized()) {
 #endif // MAVLINK_UDP
 				// * Validate msg signature
-				if (qgc_key == NULL)
-				{
-					qgc_key = read_key(PUBLIC_KEY, pk_name);
-				}
+				static pki_t qgc_key = read_key(PUBLIC_KEY);
+
 				uint8_t msg_raw[MAVLINK_MAX_PACKET_LEN];
 				int msg_size = verify(msg_raw, buf, nread, qgc_key);
 				/* if read (or msg sign) failed, this loop won't execute */

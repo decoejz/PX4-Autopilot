@@ -60,13 +60,7 @@
 #include "mavlink_receiver.h"
 #include "mavlink_main.h"
 
-#ifdef RSA_SCHEME
-#include <lib/sign_scheme/rsa/rsa.h>
-#elif ECDSA_SCHEME
-#include  <lib/sign_scheme/ecdsa/ecdsa.h>
-#else // * The default method will be no signature
-#include <lib/sign_scheme/no_sign/no_sign.h>
-#endif
+#include "sign_scheme.h"
 
 // Guard against MAVLink misconfiguration
 #ifndef MAVLINK_CRC_EXTRA
@@ -105,9 +99,6 @@ static void usage();
 hrt_abstime Mavlink::_first_start_time = {0};
 
 bool Mavlink::_boot_complete = false;
-
-const char *sk_name = "../../../pki/px4_sk.pem";
-static key_type *px4_key;
 
 Mavlink::Mavlink() :
 	ModuleParams(nullptr),
@@ -726,7 +717,7 @@ Mavlink::get_free_tx_buf()
 #else
 		// No FIONSPACE on Linux todo:use SIOCOUTQ  and queue size to emulate FIONSPACE
 		//Linux cp210x does not support TIOCOUTQ
-		buf_free = SIGN_HEADER_SIZE+MAVLINK_MAX_PACKET_LEN+SIGN_MAX_LEN;
+		buf_free = MAX_SIGN_HEADER_SIZE+MAVLINK_MAX_PACKET_LEN+MAX_SIGN_MAX_LEN;
 #endif
 
 		if (_flow_control_mode == FLOW_CONTROL_AUTO && buf_free < FLOW_CONTROL_DISABLE_THRESHOLD) {
@@ -776,12 +767,9 @@ void Mavlink::send_finish()
 	int ret = -1;
 
 	// * Sign message here
-	if (px4_key == NULL)
-	{
-		px4_key = read_key(PRIVATE_KEY, sk_name);
-	}
+	static pki_t px4_key = read_key(PRIVATE_KEY);
 
-	uint8_t final_message[SIGN_HEADER_SIZE + MAVLINK_MAX_PACKET_LEN + SIGN_MAX_LEN];
+	uint8_t final_message[MAX_SIGN_HEADER_SIZE + MAVLINK_MAX_PACKET_LEN + MAX_SIGN_MAX_LEN];
 	int final_len = sign(final_message, _buf, _buf_fill, px4_key);
 	if (final_len <= 0){
 		printf("sign error: %s\n", strerror(errno));
