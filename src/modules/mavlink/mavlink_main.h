@@ -107,8 +107,6 @@ enum class Protocol {
 
 using namespace time_literals;
 
-int msg2int(int msg0, int msg1, int msg2);
-
 class Mavlink final : public ModuleParams
 {
 

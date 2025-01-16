@@ -101,40 +101,11 @@ hrt_abstime Mavlink::_first_start_time = {0};
 
 bool Mavlink::_boot_complete = false;
 
-static int initialized = 0;
-static char file_name[200];
-#include <unistd.h> // !! Remove this line
-
-int msg2int(int msg0, int msg1, int msg2)
-{
-    return (msg2 << 16) | (msg1 << 8) | msg0;
-}
-
-void initialize_logs_sender()
-{
-    if (!initialized)
-    {
-	// !! Remove this comments
-	// char cwd[PATH_MAX];
-	// char *getcwd(char *buf, size_t size);
-	// getcwd(cwd, sizeof(cwd));
-	// printf("Current working dir: %s\n", cwd);
-
-        time_t now = time(NULL);
-	srand(now); // Add seed from now so it never repeats the ID between executions
-	sprintf(file_name, "../../../logs/sign_data_log_%ld.csv", now);
-	FILE *data_log = fopen(file_name, "a+");
-	fprintf(data_log, "id,app,operation,step,valid,time,msgid\n");
-	fclose(data_log);
-
-        initialized = 1;
-    }
-}
-
 Mavlink::Mavlink() :
 	ModuleParams(nullptr),
 	_receiver(this)
 {
+	setenv("APP_NAME", "px4", 0);
 	// initialise parameter cache
 	mavlink_update_parameters();
 
@@ -797,25 +768,15 @@ void Mavlink::send_finish()
 
 	int ret = -1;
 
-	int msgid = msg2int(_buf[7], _buf[8], _buf[9]);
 
 	// * Sign message here
-	initialize_logs_sender();
 	static pki_t px4_key = read_key(PRIVATE_KEY);
 
-	int id = rand();
-    	time_t before = time(NULL), after;
 	uint8_t final_message[MAX_SIGN_HEADER_SIZE + MAVLINK_MAX_PACKET_LEN + MAX_SIGN_MAX_LEN];
 	int final_len = sign(final_message, _buf, _buf_fill, px4_key);
-	after = time(NULL);
 	if (final_len <= 0){
 		printf("sign error: %s\n", strerror(errno));
 	}
-
-	FILE *data_log = fopen(file_name, "a+");
-	fprintf(data_log, "%d,px4,sign,before,2,%ld,%d\n", id, before, msgid);
-	fprintf(data_log, "%d,px4,sign,after,2,%ld,%d\n", id, after, msgid);
-	fclose(data_log);
 
 	// send message to UART
 	if (get_protocol() == Protocol::SERIAL) {
