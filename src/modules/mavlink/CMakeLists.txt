@@ -31,12 +31,6 @@
 #
 ############################################################################
 
-string(ASCII 27 Esc)
-set(ColourReset "${Esc}[m")
-set(Red         "${Esc}[31m")
-set(Green       "${Esc}[32m")
-set(Blue        "${Esc}[34m")
-
 set(MAVLINK_GIT_DIR "${CMAKE_CURRENT_LIST_DIR}/mavlink")
 set(MAVLINK_LIBRARY_DIR "${CMAKE_BINARY_DIR}/mavlink")
 file(RELATIVE_PATH MAVLINK_GIT_DIR_RELATIVE ${CMAKE_SOURCE_DIR} ${MAVLINK_GIT_DIR})
@@ -106,24 +100,30 @@ target_include_directories(mavlink_c
 		${MAVLINK_LIBRARY_DIR}/${MAVLINK_DIALECT_UAVIONIX}
 )
 
-# Check if SIGN_TYPE environment variable is defined
-if(DEFINED ENV{SIGN_TYPE})
-	if("$ENV{SIGN_TYPE}" STREQUAL "RSA")
-		message(STATUS "SIGN_TYPE is ${Blue}RSA${ColourReset}.")
-		set(SCHEME_LIB rsa)
-		add_definitions(-DRSA_SCHEME)
-	elseif("$ENV{SIGN_TYPE}" STREQUAL "ECDSA")
-		message(STATUS "SIGN_TYPE is ${Blue}ECDSA${ColourReset}.")
-		set(SCHEME_LIB ecdsa)
-		add_definitions(-DECDSA_SCHEME)
-	else()
-		message(STATUS "SIGN_TYPE ${Blue}no signature${ColourReset} configured.")
-		set(SCHEME_LIB no_sign)
-	endif()
-else()
-	message(STATUS "SIGN_TYPE ${Blue}no signature${ColourReset} configured.")
-	set(SCHEME_LIB no_sign)
-endif()
+# Define the path to your SignScheme library
+set(SIGN_SCHEME_ROOT "${CMAKE_SOURCE_DIR}/../mav_aris/sign_scheme")
+set(SIGN_SCHEME_INSTALL_DIR "${SIGN_SCHEME_ROOT}/install")
+
+# Add include directories
+include_directories(
+    ${SIGN_SCHEME_INSTALL_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+set(SIGN_SCHEME_LIB_FILE "${SIGN_SCHEME_INSTALL_DIR}/lib/libSignScheme.a")
+
+find_package(OpenSSL REQUIRED)
+
+# Create imported target for static library
+add_library(sign_scheme SHARED IMPORTED GLOBAL)
+set_target_properties(sign_scheme PROPERTIES
+    IMPORTED_LOCATION "${SIGN_SCHEME_LIB_FILE}"
+    INTERFACE_INCLUDE_DIRECTORIES "${SIGN_SCHEME_INSTALL_DIR}/include"
+)
+
+file(GLOB_RECURSE SIGN_SCHEME_HEADERS "${SIGN_SCHEME_INSTALL_DIR}/include/*.h")
+file(COPY ${SIGN_SCHEME_HEADERS} DESTINATION ${CMAKE_BINARY_DIR}/include)
+
 
 px4_add_module(
 	MODULE modules__mavlink
@@ -168,7 +168,6 @@ px4_add_module(
 		tunes
 		variable_length_ringbuffer
 		version
-		${SCHEME_LIB}
 	UNITY_BUILD
 	)
 
@@ -191,3 +190,13 @@ px4_add_unit_gtest(SRC MavlinkStatustextHandlerTest.cpp
 if(CONFIG_NET AND "${PX4_PLATFORM}" MATCHES "nuttx")
 	target_link_libraries(modules__mavlink PRIVATE nuttx_apps) # netlib_get_ipv4netmask
 endif()
+
+target_link_libraries(modules__mavlink
+    PRIVATE
+	sign_scheme
+	OpenSSL::SSL
+	OpenSSL::Crypto
+)
+
+link_directories(${SIGN_SCHEME_INSTALL_DIR}/lib)
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${SIGN_SCHEME_INSTALL_DIR}/lib -lSignScheme")
