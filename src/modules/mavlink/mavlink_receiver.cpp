@@ -71,6 +71,31 @@
 #define MAVLINK_RECEIVER_NET_ADDED_STACK 0
 #endif
 
+static int initialized = 0;
+static char file_name[200];
+#include <unistd.h> // !! Remove this line
+
+void initialize_logs_receiver()
+{
+    if (!initialized)
+    {
+	// !! Remove this comments
+	// char cwd[PATH_MAX];
+	// char *getcwd(char *buf, size_t size);
+	// getcwd(cwd, sizeof(cwd));
+	// printf("Current working dir: %s\n", cwd);
+
+        time_t now = time(NULL);
+	srand(now); // Add seed from now so it never repeats the ID between executions
+	sprintf(file_name, "../../../logs/verify_data_log_%ld.csv", now);
+	FILE *data_log = fopen(file_name, "a+");
+	fprintf(data_log, "id,app,operation,step,valid,time,msgid\n");
+	fclose(data_log);
+
+        initialized = 1;
+    }
+}
+
 MavlinkReceiver::~MavlinkReceiver()
 {
 	delete _tune_publisher;
@@ -3133,11 +3158,22 @@ MavlinkReceiver::run()
 			// only start accepting messages on UDP once we're sure who we talk to
 			if (_mavlink->get_protocol() != Protocol::UDP || _mavlink->get_client_source_initialized()) {
 #endif // MAVLINK_UDP
+				initialize_logs_receiver();
+
 				// * Validate msg signature
 				static pki_t qgc_key = read_key(PUBLIC_KEY);
 
+				int id = rand();
+        			time_t before = time(NULL), after;
 				uint8_t msg_raw[MAVLINK_MAX_PACKET_LEN];
 				int msg_size = verify(msg_raw, buf, nread, qgc_key);
+				after = time(NULL);
+
+				int msgid = msg2int(msg_raw[7], msg_raw[8], msg_raw[9]);
+				FILE *data_log = fopen(file_name, "a+");
+				fprintf(data_log, "%d,px4,verify,before,2,%ld,%d\n", id, before, msgid);
+				fprintf(data_log, "%d,px4,verify,after,%d,%ld,%d\n", id, (msg_size <= 0) ? 0 : 1, after, msgid);
+				fclose(data_log);
 				/* if read (or msg sign) failed, this loop won't execute */
 				for (ssize_t i = 0; i < msg_size; i++) {
 					if (mavlink_parse_char(_mavlink->get_channel(), msg_raw[i], &msg, &_status)) {
