@@ -86,7 +86,7 @@
 #include "mavlink_shell.h"
 #include "mavlink_ulog.h"
 
-#include "sign_scheme.h"
+#include <sign_scheme.h>
 
 #define DEFAULT_BAUD_RATE       57600
 #define DEFAULT_DEVICE_NAME     "/dev/ttyS1"

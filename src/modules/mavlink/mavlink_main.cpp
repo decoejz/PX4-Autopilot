@@ -60,7 +60,7 @@
 #include "mavlink_receiver.h"
 #include "mavlink_main.h"
 
-#include "sign_scheme.h"
+#include <sign_scheme.h>
 
 // Guard against MAVLink misconfiguration
 #ifndef MAVLINK_CRC_EXTRA

@@ -63,7 +63,7 @@
 
 #include <lib/drivers/device/Device.hpp> // For DeviceId union
 
-#include "sign_scheme.h"
+#include <sign_scheme.h>
 
 #ifdef CONFIG_NET
 #define MAVLINK_RECEIVER_NET_ADDED_STACK 1360
