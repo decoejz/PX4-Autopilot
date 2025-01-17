@@ -768,7 +768,6 @@ void Mavlink::send_finish()
 
 	int ret = -1;
 
-
 	// * Sign message here
 	static pki_t px4_key = read_key(PRIVATE_KEY);
 
