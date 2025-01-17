@@ -3133,15 +3133,12 @@ MavlinkReceiver::run()
 			// only start accepting messages on UDP once we're sure who we talk to
 			if (_mavlink->get_protocol() != Protocol::UDP || _mavlink->get_client_source_initialized()) {
 #endif // MAVLINK_UDP
-				// initialize_logs_receiver();
 
 				// * Validate msg signature
 				static pki_t qgc_key = read_key(PUBLIC_KEY);
 
-
 				uint8_t msg_raw[MAVLINK_MAX_PACKET_LEN];
 				int msg_size = verify(msg_raw, buf, nread, qgc_key);
-
 				/* if read (or msg sign) failed, this loop won't execute */
 				for (ssize_t i = 0; i < msg_size; i++) {
 					if (mavlink_parse_char(_mavlink->get_channel(), msg_raw[i], &msg, &_status)) {
