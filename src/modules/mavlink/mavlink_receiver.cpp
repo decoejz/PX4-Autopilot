@@ -3133,7 +3133,6 @@ MavlinkReceiver::run()
 			// only start accepting messages on UDP once we're sure who we talk to
 			if (_mavlink->get_protocol() != Protocol::UDP || _mavlink->get_client_source_initialized()) {
 #endif // MAVLINK_UDP
-
 				// * Validate msg signature
 				static pki_t qgc_key = read_key(PUBLIC_KEY);
 
