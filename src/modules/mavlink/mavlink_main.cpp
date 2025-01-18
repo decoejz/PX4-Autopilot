@@ -105,7 +105,7 @@ Mavlink::Mavlink() :
 	ModuleParams(nullptr),
 	_receiver(this)
 {
-	setenv("APP_NAME", "px4", 0);
+	setenv("APP_NAME", "PX4", 0);
 	// initialise parameter cache
 	mavlink_update_parameters();
 
