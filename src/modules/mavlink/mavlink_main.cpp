@@ -41,6 +41,7 @@
  */
 
 #include <termios.h>
+#include <stdlib.h>
 
 #ifdef CONFIG_NET
 #include <arpa/inet.h>
@@ -104,6 +105,7 @@ Mavlink::Mavlink() :
 	ModuleParams(nullptr),
 	_receiver(this)
 {
+	setenv("APP_NAME", "PX4", 0);
 	// initialise parameter cache
 	mavlink_update_parameters();
 
