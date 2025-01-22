@@ -101,7 +101,7 @@ target_include_directories(mavlink_c
 )
 
 # Define the path to your SignScheme library
-set(SIGN_SCHEME_ROOT "${CMAKE_SOURCE_DIR}/../mav_aris/sign_scheme")
+set(SIGN_SCHEME_ROOT "${CMAKE_SOURCE_DIR}/../sign_scheme")
 set(SIGN_SCHEME_INSTALL_DIR "${SIGN_SCHEME_ROOT}/install")
 
 # Add include directories

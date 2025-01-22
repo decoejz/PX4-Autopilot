@@ -111,3 +111,5 @@ log/
 
 
 *.pem
+
+config.env
